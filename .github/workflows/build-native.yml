@@ -1,0 +1,57 @@
+name: Build CloudLease BetterNCM Native Plugin
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v0.3.0*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout CloudLease source
+        uses: actions/checkout@v4
+
+      - name: Checkout BetterNCM native API and its submodules
+        uses: actions/checkout@v4
+        with:
+          repository: BetterNCM/betterncm-native-plugin-rs
+          ref: main
+          path: native-api
+          submodules: recursive
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Prepare native plugin crate
+        shell: pwsh
+        run: |
+          Copy-Item "native/src/lib.rs" "native-api/betterncm-plugin-example/src/lib.rs" -Force
+          Copy-Item "native/Cargo.toml" "native-api/betterncm-plugin-example/Cargo.toml" -Force
+
+      - name: Build x64 native DLL
+        shell: pwsh
+        run: |
+          cargo build --release --target x86_64-pc-windows-msvc --manifest-path native-api/betterncm-plugin-example/Cargo.toml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Assemble plugin package
+        shell: pwsh
+        run: |
+          $out = "dist/CloudLease-BetterNCM-V0.3.0"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item "plugin/*" $out -Recurse -Force
+          Copy-Item "native-api/target/x86_64-pc-windows-msvc/release/cloudlease_native.dll" "$out/native.dll" -Force
+          Compress-Archive -Path "$out/*" -DestinationPath "CloudLease-BetterNCM-V0.3.0-install.zip" -Force
+
+      - name: Upload installable plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: CloudLease-BetterNCM-V0.3.0-installable-x64
+          path: CloudLease-BetterNCM-V0.3.0-install.zip
+          if-no-files-found: error
