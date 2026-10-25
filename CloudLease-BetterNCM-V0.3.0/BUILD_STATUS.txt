@@ -1,0 +1,5 @@
+CloudLease BetterNCM V0.3.0
+
+This ZIP is the SOURCE PROJECT, not the installable plugin binary.
+The native DLL must be built by the included Windows GitHub Actions workflow.
+No live NetEase Cloud Music process test has been performed here.
