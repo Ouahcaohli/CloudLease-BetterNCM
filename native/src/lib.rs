@@ -2,15 +2,13 @@
 
 use betterncm_macro::{betterncm_main, betterncm_native_call};
 use betterncm_plugin_api::*;
-use std::ffi::OsString;
 use std::fs;
-use std::os::windows::ffi::OsStringExt;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicIsize, Ordering};
 use std::sync::{Mutex, OnceLock};
 use std::thread;
 use windows_sys::Win32::Foundation::{BOOL, HWND, LPARAM, LRESULT, RECT, SYSTEMTIME, WPARAM};
-use windows_sys::Win32::Graphics::Gdi::{BeginPaint, EndPaint, FillRect, GetStockObject, TextOutW, PAINTSTRUCT, HBRUSH, WHITE_BRUSH};
+use windows_sys::Win32::Graphics::Gdi::{BeginPaint, EndPaint, FillRect, GetStockObject, PAINTSTRUCT, HBRUSH, WHITE_BRUSH};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::WindowsAndMessaging::*;
 use windows_sys::Win32::System::SystemInformation::GetLocalTime;
@@ -18,6 +16,10 @@ use windows_sys::Win32::UI::Controls::InitCommonControls;
 
 const CLASS_NAME: &[u16] = &[67,108,111,117,100,76,101,97,115,101,80,97,110,101,108,0];
 const WM_APP_TOGGLE: u32 = WM_APP + 17;
+// STATIC control left alignment is zero; windows-sys 0.59 does not expose SS_LEFT.
+const SS_LEFT: u32 = 0;
+// Win32 system color index for COLOR_WINDOW.
+const COLOR_WINDOW: i32 = 5;
 const ID_ACCOUNT: i32 = 101;
 const ID_START: i32 = 102;
 const ID_END: i32 = 103;
@@ -135,18 +137,18 @@ unsafe extern "system" fn wnd_proc(hwnd: HWND, msg: u32, wparam: WPARAM, lparam:
             create_child(hwnd, "STATIC", "", WS_VISIBLE | SS_LEFT, 121, 16, 228, 350, 24);
             create_child(hwnd, "STATIC", "租期记录", WS_VISIBLE | SS_LEFT, 122, 16, 258, 350, 24);
             create_child(hwnd, "STATIC", "账号 / 标识", SS_LEFT, 123, 16, 286, 92, 22);
-            create_child(hwnd, "EDIT", "", WS_BORDER | ES_AUTOHSCROLL, ID_ACCOUNT, 110, 282, 250, 24);
+            create_child(hwnd, "EDIT", "", WS_BORDER | ES_AUTOHSCROLL as u32, ID_ACCOUNT, 110, 282, 250, 24);
             create_child(hwnd, "STATIC", "开始日期", SS_LEFT, 124, 16, 316, 92, 22);
-            create_child(hwnd, "EDIT", "YYYY-MM-DD", WS_BORDER | ES_AUTOHSCROLL, ID_START, 110, 312, 112, 24);
+            create_child(hwnd, "EDIT", "YYYY-MM-DD", WS_BORDER | ES_AUTOHSCROLL as u32, ID_START, 110, 312, 112, 24);
             create_child(hwnd, "STATIC", "到期日期", SS_LEFT, 125, 16, 346, 92, 22);
-            create_child(hwnd, "EDIT", "YYYY-MM-DD", WS_BORDER | ES_AUTOHSCROLL, ID_END, 110, 342, 112, 24);
+            create_child(hwnd, "EDIT", "YYYY-MM-DD", WS_BORDER | ES_AUTOHSCROLL as u32, ID_END, 110, 342, 112, 24);
             create_child(hwnd, "STATIC", "备注", SS_LEFT, 126, 16, 376, 92, 22);
-            create_child(hwnd, "EDIT", "", WS_BORDER | ES_AUTOHSCROLL, ID_NOTE, 110, 372, 250, 24);
-            create_child(hwnd, "BUTTON", "添加记录", BS_PUSHBUTTON, ID_ADD, 16, 406, 100, 28);
-            create_child(hwnd, "BUTTON", "删除选中", BS_PUSHBUTTON, ID_DELETE, 124, 406, 100, 28);
-            create_child(hwnd, "BUTTON", "收纳", BS_PUSHBUTTON, ID_MINIMIZE, 232, 406, 80, 28);
-            create_child(hwnd, "LISTBOX", "", WS_BORDER | LBS_NOTIFY | WS_VSCROLL | LBS_NOINTEGRALHEIGHT, ID_LIST, 16, 446, 350, 340);
-            SetTimer(hwnd, 1, 1000, std::ptr::null_mut());
+            create_child(hwnd, "EDIT", "", WS_BORDER | ES_AUTOHSCROLL as u32, ID_NOTE, 110, 372, 250, 24);
+            create_child(hwnd, "BUTTON", "添加记录", BS_PUSHBUTTON as u32, ID_ADD, 16, 406, 100, 28);
+            create_child(hwnd, "BUTTON", "删除选中", BS_PUSHBUTTON as u32, ID_DELETE, 124, 406, 100, 28);
+            create_child(hwnd, "BUTTON", "收纳", BS_PUSHBUTTON as u32, ID_MINIMIZE, 232, 406, 80, 28);
+            create_child(hwnd, "LISTBOX", "", WS_BORDER | LBS_NOTIFY as u32 | WS_VSCROLL | LBS_NOINTEGRALHEIGHT as u32, ID_LIST, 16, 446, 350, 340);
+            SetTimer(hwnd, 1, 1000, None);
             refresh_list(hwnd);
             0
         }
